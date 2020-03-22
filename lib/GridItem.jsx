@@ -48,6 +48,9 @@ type Props = {
   usePercentages?: boolean,
   transformScale: number,
   droppingPosition?: DroppingPosition,
+  columnInsertMode?: boolean,
+  placeholder?: boolean,
+  isBetween?: boolean,
 
   className: string,
   style?: Object,
@@ -139,6 +142,8 @@ export default class GridItem extends React.Component<Props, State> {
     // Flags
     isDraggable: PropTypes.bool.isRequired,
     isResizable: PropTypes.bool.isRequired,
+    isBetween: PropTypes.bool,
+    placeholder: PropTypes.bool,
     static: PropTypes.bool,
 
     // Use CSS transforms instead of top/left
@@ -260,7 +265,10 @@ export default class GridItem extends React.Component<Props, State> {
       containerWidth: props.containerWidth,
       margin: props.margin,
       maxRows: props.maxRows,
-      rowHeight: props.rowHeight
+      rowHeight: props.rowHeight,
+      columnInsertMode: props.columnInsertMode,
+      placeholder: props.placeholder,
+      isBetween: props.isBetween
     };
   }
 
@@ -391,7 +399,7 @@ export default class GridItem extends React.Component<Props, State> {
     newPosition.top = cTop - pTop + offsetParent.scrollTop;
     this.setState({ dragging: newPosition });
 
-    const { x, y } = calcXY(
+    const { x, y, isBetween } = calcXY(
       this.getPositionParams(),
       newPosition.top,
       newPosition.left,
@@ -404,7 +412,8 @@ export default class GridItem extends React.Component<Props, State> {
       this.props.onDragStart.call(this, this.props.i, x, y, {
         e,
         node,
-        newPosition
+        newPosition,
+        isBetween
       })
     );
   };
@@ -428,7 +437,7 @@ export default class GridItem extends React.Component<Props, State> {
     newPosition.top = this.state.dragging.top + deltaY;
     this.setState({ dragging: newPosition });
 
-    const { x, y } = calcXY(
+    const { x, y, isBetween } = calcXY(
       this.getPositionParams(),
       newPosition.top,
       newPosition.left,
@@ -441,7 +450,8 @@ export default class GridItem extends React.Component<Props, State> {
       onDrag.call(this, this.props.i, x, y, {
         e,
         node,
-        newPosition
+        newPosition,
+        isBetween
       })
     );
   };
@@ -462,7 +472,7 @@ export default class GridItem extends React.Component<Props, State> {
     newPosition.top = this.state.dragging.top;
     this.setState({ dragging: null });
 
-    const { x, y } = calcXY(
+    const { x, y, isBetween } = calcXY(
       this.getPositionParams(),
       newPosition.top,
       newPosition.left,
@@ -475,7 +485,8 @@ export default class GridItem extends React.Component<Props, State> {
       this.props.onDragStop.call(this, this.props.i, x, y, {
         e,
         node,
-        newPosition
+        newPosition,
+        isBetween
       })
     );
   };

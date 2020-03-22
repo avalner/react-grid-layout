@@ -15,7 +15,9 @@ import {
   getAllCollisions,
   compactType,
   noop,
-  fastRGLPropsEqual
+  fastRGLPropsEqual,
+  cloneLayout,
+  clearEmptyColumns
 } from "./utils";
 
 import { calcXY } from "./calculateUtils";
@@ -99,6 +101,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
     verticalCompact: true,
     compactType: "vertical",
     preventCollision: false,
+    columnInsertMode: false,
     droppingItem: {
       i: "__dropping-elem__",
       h: 1,
@@ -179,7 +182,8 @@ export default class ReactGridLayout extends React.Component<Props, State> {
         newLayoutBase,
         nextProps.children,
         nextProps.cols,
-        compactType(nextProps)
+        compactType(nextProps),
+        nextProps.columnInsertMode
       );
 
       return {
@@ -263,40 +267,51 @@ export default class ReactGridLayout extends React.Component<Props, State> {
    * @param {Event} e The mousedown event
    * @param {Element} node The current dragging DOM element
    */
-  onDrag(i: string, x: number, y: number, { e, node }: GridDragEvent) {
+  onDrag(
+    i: string,
+    x: number,
+    y: number,
+    { e, node, isBetween }: GridDragEvent
+  ) {
     const { oldDragItem } = this.state;
     let { layout } = this.state;
-    const { cols } = this.props;
+    const { cols, columnInsertMode } = this.props;
     var l = getLayoutItem(layout, i);
     if (!l) return;
+
+    l.isBetween = isBetween;
 
     // Create placeholder (display only)
     var placeholder = {
       w: l.w,
       h: l.h,
-      x: l.x,
+      x: isBetween ? x : l.x,
       y: l.y,
       placeholder: true,
+      isBetween,
       i: i
     };
 
     // Move the element to the dragged location.
     const isUserAction = true;
-    layout = moveElement(
-      layout,
-      l,
-      x,
-      y,
-      isUserAction,
-      this.props.preventCollision,
-      compactType(this.props),
-      cols
-    );
+
+    if (!isBetween) {
+      layout = moveElement(
+        layout,
+        l,
+        x,
+        y,
+        isUserAction,
+        this.props.preventCollision,
+        compactType(this.props),
+        cols
+      );
+    }
 
     this.props.onDrag(layout, oldDragItem, l, placeholder, e, node);
 
     this.setState({
-      layout: compact(layout, compactType(this.props), cols),
+      layout: compact(layout, compactType(this.props), cols, columnInsertMode),
       activeDrag: placeholder
     });
   }
@@ -309,14 +324,21 @@ export default class ReactGridLayout extends React.Component<Props, State> {
    * @param {Event} e The mousedown event
    * @param {Element} node The current dragging DOM element
    */
-  onDragStop(i: string, x: number, y: number, { e, node }: GridDragEvent) {
+  onDragStop(
+    i: string,
+    x: number,
+    y: number,
+    { e, node, isBetween }: GridDragEvent
+  ) {
     if (!this.state.activeDrag) return;
 
     const { oldDragItem } = this.state;
     let { layout } = this.state;
-    const { cols, preventCollision } = this.props;
+    const { cols, preventCollision, columnInsertMode } = this.props;
     const l = getLayoutItem(layout, i);
     if (!l) return;
+
+    l.isBetween = false;
 
     // Move the element here
     const isUserAction = true;
@@ -328,13 +350,19 @@ export default class ReactGridLayout extends React.Component<Props, State> {
       isUserAction,
       preventCollision,
       compactType(this.props),
-      cols
+      cols,
+      isBetween
     );
 
     this.props.onDragStop(layout, oldDragItem, l, null, e, node);
 
     // Set state
-    const newLayout = compact(layout, compactType(this.props), cols);
+    const newLayout = compact(
+      layout,
+      compactType(this.props),
+      cols,
+      columnInsertMode
+    );
     const { oldLayout } = this.state;
     this.setState({
       activeDrag: null,
@@ -457,7 +485,8 @@ export default class ReactGridLayout extends React.Component<Props, State> {
       rowHeight,
       maxRows,
       useCSSTransforms,
-      transformScale
+      transformScale,
+      columnInsertMode
     } = this.props;
 
     // {...this.state.activeDrag} is pretty slow, actually
@@ -477,8 +506,11 @@ export default class ReactGridLayout extends React.Component<Props, State> {
         rowHeight={rowHeight}
         isDraggable={false}
         isResizable={false}
+        placeholder={activeDrag.placeholder}
+        isBetween={activeDrag.isBetween}
         useCSSTransforms={useCSSTransforms}
         transformScale={transformScale}
+        columnInsertMode={columnInsertMode}
       >
         <div />
       </GridItem>
@@ -509,7 +541,8 @@ export default class ReactGridLayout extends React.Component<Props, State> {
       useCSSTransforms,
       transformScale,
       draggableCancel,
-      draggableHandle
+      draggableHandle,
+      columnInsertMode
     } = this.props;
     const { mounted, droppingPosition } = this.state;
 
@@ -546,6 +579,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
         useCSSTransforms={useCSSTransforms && mounted}
         usePercentages={!mounted}
         transformScale={transformScale}
+        columnInsertMode={columnInsertMode}
         w={l.w}
         h={l.h}
         x={l.x}
