@@ -350,4 +350,19 @@ declare namespace ReactGridLayout {
     function WidthProvider<P>(
         component: React.ComponentClass<P> | React.FunctionComponent<P>
     ): React.ComponentClass<P & WidthProviderProps>;
+
+    interface Utils {
+        /**
+         * Return the bottom coordinate of the layout.
+         *
+         * @param  {Array} layout Layout array.
+         * @return {Number}       Bottom coordinate.
+         */
+        bottom(layout: Layout): number;
+        getColumnCount(layout: Layout): number;
+        cloneLayout(layout: Layout): Layout;
+        cloneLayoutItem(layoutItem: LayoutItem): LayoutItem;        
+    }
+
+    const utils: Utils;
 }
